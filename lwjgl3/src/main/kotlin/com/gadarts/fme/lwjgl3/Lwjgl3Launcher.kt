@@ -13,7 +13,7 @@ fun main() {
       return
     Lwjgl3Application(FpsMapEditor(), Lwjgl3ApplicationConfiguration().apply {
         setTitle("fps-map-editor")
-        setWindowedMode(640, 480)
+        setWindowedMode(1280, 960)
         setWindowIcon(*(arrayOf(128, 64, 32, 16).map { "libgdx$it.png" }.toTypedArray()))
     })
 }

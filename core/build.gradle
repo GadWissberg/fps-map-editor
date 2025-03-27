@@ -9,7 +9,7 @@ dependencies {
   api "com.badlogicgames.gdx:gdx:$gdxVersion"
   api "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
   implementation "com.kotcrab.vis:vis-ui:1.5.3"
-  if(enableGraalNative == 'true') {
+  if (enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
   }
 }
