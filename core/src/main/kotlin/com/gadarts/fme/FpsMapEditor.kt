@@ -2,9 +2,9 @@ package com.gadarts.fme
 
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.kotcrab.vis.ui.VisUI
@@ -13,26 +13,22 @@ import com.kotcrab.vis.ui.widget.MenuBar
 import com.kotcrab.vis.ui.widget.MenuItem
 import com.kotcrab.vis.ui.widget.VisTable
 
-/** [com.badlogic.gdx.ApplicationListener] implementation shared by all platforms. */
 class FpsMapEditor : ApplicationAdapter() {
+    private val sceneRenderer: SceneRenderer by lazy { SceneRenderer() }
     private val stage: Stage by lazy { Stage(ScreenViewport()) }
-
     override fun create() {
+        Gdx.input.inputProcessor = InputMultiplexer(stage)
         VisUI.load()
-        Gdx.input.inputProcessor = stage
         val menuBar = addMenu()
         val root = VisTable()
         root.setFillParent(true)
         root.top()
         root.add(menuBar.table).expandX().fillX().row()
         stage.addActor(root)
-
         val heightUnderBars = WINDOW_HEIGHT - (menuBar.table.height)
-        val sceneRenderer = Table()
-        sceneRenderer.setFillParent(true)
         root.add(sceneRenderer).size(WINDOW_WIDTH, heightUnderBars)
         root.pack()
-
+        sceneRenderer.init()
     }
 
     private fun addMenu(): MenuBar {
@@ -56,9 +52,16 @@ class FpsMapEditor : ApplicationAdapter() {
 
     override fun render() {
         super.render()
-        ScreenUtils.clear(Color.BLACK)
+        Gdx.gl.glViewport(
+            0,
+            0,
+            Gdx.graphics.backBufferWidth,
+            Gdx.graphics.backBufferHeight
+        )
+        ScreenUtils.clear(Color.BLACK, true)
         stage.act()
         stage.draw()
+        sceneRenderer.render()
     }
 
     companion object {
