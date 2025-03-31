@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 
 class SceneRenderer : Table() {
+    private var mode: Modes? = null
     private val auxiliaryModelInstances = AuxiliaryModelInstances()
     private val modelsBatch = ModelBatch()
     private val camera: PerspectiveCamera = createCamera()
@@ -46,6 +47,16 @@ class SceneRenderer : Table() {
 
     fun init() {
         (Gdx.input.inputProcessor as InputMultiplexer).addProcessor(cameraController)
+    }
+
+    fun setMode(mode: Modes) {
+        this.mode = mode
+        val inputMultiplexer = Gdx.input.inputProcessor as InputMultiplexer
+        if (mode == Modes.CAMERA) {
+            inputMultiplexer.addProcessor(cameraController)
+        } else {
+            inputMultiplexer.removeProcessor(cameraController)
+        }
     }
 
     companion object {

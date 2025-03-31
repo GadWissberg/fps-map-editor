@@ -4,7 +4,10 @@ import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.kotcrab.vis.ui.VisUI
@@ -42,12 +45,36 @@ class FpsMapEditor : ApplicationAdapter() {
         fileMenu.addItem(openItem)
         fileMenu.addSeparator()
         fileMenu.addItem(exitItem)
-        val editMenu = Menu("Edit")
-        editMenu.addItem(MenuItem("Undo"))
-        editMenu.addItem(MenuItem("Redo"))
+        addModeMenu(menuBar)
         menuBar.addMenu(fileMenu)
-        menuBar.addMenu(editMenu)
         return menuBar
+    }
+
+    private fun addModeMenu(menuBar: MenuBar) {
+        val editMenu = Menu("Mode")
+        val cameraMenuItem = MenuItem("Camera")
+        addClickListenerToModeMenuItem(cameraMenuItem, Modes.CAMERA)
+        editMenu.addItem(cameraMenuItem)
+        val createMenuItem = MenuItem("Create")
+        addClickListenerToModeMenuItem(createMenuItem, Modes.CREATE)
+        editMenu.addItem(createMenuItem)
+        ButtonGroup(cameraMenuItem, createMenuItem).apply {
+            setMaxCheckCount(1)
+            setMinCheckCount(1)
+            setUncheckLast(true)
+        }
+        menuBar.addMenu(editMenu)
+    }
+
+    private fun addClickListenerToModeMenuItem(cameraMenuItem: MenuItem, mode: Modes) {
+        cameraMenuItem.addListener(
+            object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    super.clicked(event, x, y)
+                    sceneRenderer.setMode(mode)
+                }
+            }
+        )
     }
 
     override fun render() {
