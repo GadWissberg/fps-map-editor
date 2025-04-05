@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup
+import com.badlogic.gdx.scenes.scene2d.ui.Stack
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
@@ -17,19 +18,20 @@ import com.kotcrab.vis.ui.widget.MenuItem
 import com.kotcrab.vis.ui.widget.VisTable
 
 class FpsMapEditor : ApplicationAdapter() {
+    private lateinit var menuBar: MenuBar
     private val sceneRenderer: SceneRenderer by lazy { SceneRenderer() }
     private val stage: Stage by lazy { Stage(ScreenViewport()) }
     override fun create() {
         Gdx.input.inputProcessor = InputMultiplexer(stage)
         VisUI.load()
-        val menuBar = addMenu()
+        menuBar = addMenu()
         val root = VisTable()
         root.setFillParent(true)
         root.top()
-        root.add(menuBar.table).expandX().fillX().row()
         stage.addActor(root)
-        val heightUnderBars = WINDOW_HEIGHT - (menuBar.table.height)
-        root.add(sceneRenderer).size(WINDOW_WIDTH, heightUnderBars)
+        val stack = Stack()
+        stack.setFillParent(true)
+        root.add(menuBar.table).fill().expandX()
         root.pack()
         sceneRenderer.init()
     }
@@ -86,13 +88,9 @@ class FpsMapEditor : ApplicationAdapter() {
             Gdx.graphics.backBufferHeight
         )
         ScreenUtils.clear(Color.BLACK, true)
+        sceneRenderer.render()
         stage.act()
         stage.draw()
-        sceneRenderer.render()
     }
 
-    companion object {
-        const val WINDOW_WIDTH = 1280F
-        const val WINDOW_HEIGHT = 960F
-    }
 }
