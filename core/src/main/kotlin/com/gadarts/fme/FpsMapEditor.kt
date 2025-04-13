@@ -60,7 +60,10 @@ class FpsMapEditor : ApplicationAdapter() {
         val createMenuItem = MenuItem("Create")
         addClickListenerToModeMenuItem(createMenuItem, Modes.CREATE)
         editMenu.addItem(createMenuItem)
-        ButtonGroup(cameraMenuItem, createMenuItem).apply {
+        val selectFaceMenuItem = MenuItem("Faces")
+        addClickListenerToModeMenuItem(selectFaceMenuItem, Modes.SELECT_FACE)
+        editMenu.addItem(selectFaceMenuItem)
+        ButtonGroup(cameraMenuItem, createMenuItem, selectFaceMenuItem).apply {
             setMaxCheckCount(1)
             setMinCheckCount(1)
             setUncheckLast(true)
