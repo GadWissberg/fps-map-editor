@@ -22,7 +22,6 @@ import kotlin.math.abs
 class SceneRenderer : Table(), InputProcessor, Disposable {
     private var highlightedModel: Model? = null
     private var highlightedTriangleInstance: ModelInstance? = null
-    private var tri: Triple<Vector3, Vector3, Vector3>? = null
     private val initialDrawingPoint = Vector3()
     private var drawingBlock: ModelInstance? = null
     private val blocks = mutableListOf<Block>()
@@ -33,6 +32,7 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
     private val cameraController = CameraInputController(camera)
     private val cubeModel = createCubeModel()
     private val environment = createEnvironment()
+
     private fun createEnvironment(): Environment {
         val environment = Environment()
         environment.set(ColorAttribute.createAmbientLight(0.5f, 0.5f, 0.5f, 1f))
@@ -76,45 +76,6 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
         )
         camera.update()
         renderModels()
-    }
-
-    private fun createTriangleModelInstance(v1: Vector3, v2: Vector3, v3: Vector3): ModelInstance {
-        val vertices = floatArrayOf(
-            v1.x, v1.y, v1.z,
-            v2.x, v2.y, v2.z,
-            v3.x, v3.y, v3.z
-        )
-
-        val indices = shortArrayOf(0, 1, 2)
-
-        val mesh = Mesh(
-            true, 3, 3,
-            VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position")
-        )
-
-        mesh.setVertices(vertices)
-        mesh.setIndices(indices)
-
-        val material = Material(ColorAttribute.createDiffuse(Color.RED))
-        val meshPart = MeshPart("triangle", mesh, 0, 3, GL20.GL_TRIANGLES)
-        val nodePart = NodePart().apply {
-            this.meshPart = meshPart
-            this.material = material
-        }
-
-        val node = Node().apply {
-            id = "triangle"
-            parts.add(nodePart)
-        }
-
-        highlightedModel?.dispose()
-        highlightedModel = Model()
-        highlightedModel!!.meshes.add(mesh)
-        highlightedModel!!.materials.add(material)
-        highlightedModel!!.nodes.add(node)
-        highlightedModel!!.manageDisposable(mesh)
-
-        return ModelInstance(highlightedModel)
     }
 
     private fun renderModels() {
@@ -178,9 +139,7 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
     }
 
     private fun applySelectFace(screenX: Int, screenY: Int) {
-        val relativeX = screenX.toFloat()
-        val relativeY = screenY.toFloat()
-        val ray = camera.getPickRay(relativeX, relativeY)
+        val ray = camera.getPickRay(screenX.toFloat(), screenY.toFloat())
         var closestBlock: Block? = null
         var minDistance = Float.MAX_VALUE
         for (block in blocks) {
@@ -195,77 +154,100 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
             }
         }
         if (closestBlock != null) {
-            tri = getHitTriangle(ray, closestBlock.modelInstance)
-            if (tri != null) {
-                val (v1, v2, v3) = tri!!
-                val (v1offset, v2offset, v3offset) = offsetTriangle(v1, v2, v3)
-                Gdx.app.log("OffsetY", "v1.y=${v1.y}, v1offset.y=${v1offset.y}")
-                Gdx.app.log("Transform", "Model transform: ${closestBlock.modelInstance.transform}")
-                highlightedTriangleInstance = createTriangleModelInstance(v1offset, v2offset, v3offset)
-                highlightedTriangleInstance!!.transform.set(
-                    closestBlock.modelInstance.transform
-                )
+            val rectangleVerts = getHitRectangle(ray, closestBlock.modelInstance)
+            if (rectangleVerts != null) {
+                highlightedTriangleInstance = createRectangleHighlight(rectangleVerts)
+                highlightedTriangleInstance!!.transform.idt() // FIX: use identity transform here
             }
-            Gdx.app.log(
-                "SceneRenderer",
-                "Hit triangle: ${tri?.first}, ${tri?.second}, ${tri?.third}"
-            )
         }
     }
 
-    private fun offsetTriangle(
-        v1: Vector3,
-        v2: Vector3,
-        v3: Vector3,
-        amount: Float = 0.02f
-    ): Triple<Vector3, Vector3, Vector3> {
-        val edge1 = Vector3(v2).sub(v1)
-        val edge2 = Vector3(v3).sub(v1)
-        val normal = edge1.crs(edge2).nor()
+    private fun createRectangleHighlight(vertices: List<Vector3>): ModelInstance {
+        val verticesFlat = FloatArray(vertices.size * 3)
+        vertices.forEachIndexed { idx, v ->
+            verticesFlat[idx * 3] = v.x
+            verticesFlat[idx * 3 + 1] = v.y
+            verticesFlat[idx * 3 + 2] = v.z
+        }
 
-        Gdx.app.log("Offset", "Computed normal = $normal")
+        val indices = shortArrayOf(0, 1, 2, 3, 4, 5) // Two triangles forming the rectangle
 
-        val offset = Vector3(normal).scl(amount)
-
-        return Triple(
-            Vector3(v1).add(offset),
-            Vector3(v2).add(offset),
-            Vector3(v3).add(offset)
+        val mesh = Mesh(
+            true, 6, 6,
+            VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position")
         )
+
+        mesh.setVertices(verticesFlat)
+        mesh.setIndices(indices)
+
+        val material = Material(ColorAttribute.createDiffuse(Color.RED))
+        val meshPart = MeshPart("rectangle", mesh, 0, 6, GL20.GL_TRIANGLES)
+        val nodePart = NodePart().apply {
+            this.meshPart = meshPart
+            this.material = material
+        }
+
+        val node = Node().apply {
+            id = "rectangle"
+            parts.add(nodePart)
+        }
+
+        highlightedModel?.dispose()
+        highlightedModel = Model().apply {
+            meshes.add(mesh)
+            materials.add(material)
+            nodes.add(node)
+            manageDisposable(mesh)
+        }
+
+        return ModelInstance(highlightedModel)
     }
 
-    private fun getHitTriangle(
-        ray: Ray,
-        instance: ModelInstance
-    ): Triple<Vector3, Vector3, Vector3>? {
+    private fun transformVertex(v: Vector3, instance: ModelInstance, node: Node): Vector3 {
+        return v.cpy().mul(node.globalTransform).mul(instance.transform)
+    }
+
+    private fun getHitRectangle(ray: Ray, instance: ModelInstance): List<Vector3>? {
         val mesh = instance.model.meshes.first()
+        val node = instance.nodes.first() // crucial step: getting the node
         val vertices = getVerticesForMesh(mesh)
         val indices = getIndicesForMesh(mesh)
         val posOffset = mesh.getVertexAttribute(VertexAttributes.Usage.Position).offset / 4
         val stride = mesh.vertexSize / 4
+
         var minDist = Float.MAX_VALUE
-        var result: Triple<Vector3, Vector3, Vector3>? = null
+        var hitFaceStartIndex = -1
+        val intersection = Vector3()
+
         for (i in indices.indices step 3) {
             val i1 = indices[i].toInt()
             val i2 = indices[i + 1].toInt()
             val i3 = indices[i + 2].toInt()
-            val nodeOffset = Vector3(0.5f, 0.5f, 0.5f)
-            val v1 = createVertexVector(vertices, i1, stride, posOffset).add(nodeOffset)
-            val v2 = createVertexVector(vertices, i2, stride, posOffset).add(nodeOffset)
-            val v3 = createVertexVector(vertices, i3, stride, posOffset).add(nodeOffset)
-            val intersection = Vector3()
+
+            val v1 = transformVertex(createVertexVector(vertices, i1, stride, posOffset), instance, node)
+            val v2 = transformVertex(createVertexVector(vertices, i2, stride, posOffset), instance, node)
+            val v3 = transformVertex(createVertexVector(vertices, i3, stride, posOffset), instance, node)
+
             if (Intersector.intersectRayTriangle(ray, v1, v2, v3, intersection)) {
-                Gdx.app.log("HitCheck", "Hit at $intersection")
                 val dist = ray.origin.dst2(intersection)
                 if (dist < minDist) {
-                    Gdx.app.log("HitCheck", "Closer hit at $intersection with dist2: $dist")
                     minDist = dist
-                    result = Triple(v1.cpy(), v2.cpy(), v3.cpy())
+                    hitFaceStartIndex = i - (i % 6)
                 }
             }
         }
-        Gdx.app.log("Debug", "Vertices: ${mesh.numVertices}, Indices: ${mesh.numIndices}")
-        return result
+
+        if (hitFaceStartIndex != -1) {
+            val rectangleVertices = mutableListOf<Vector3>()
+            for (i in hitFaceStartIndex until hitFaceStartIndex + 6) {
+                val idx = indices[i].toInt()
+                val vert = transformVertex(createVertexVector(vertices, idx, stride, posOffset), instance, node)
+                rectangleVertices.add(vert)
+            }
+            return rectangleVertices
+        }
+
+        return null
     }
 
     private fun createVertexVector(
