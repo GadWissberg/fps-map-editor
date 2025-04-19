@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
 import com.badlogic.gdx.utils.Disposable
 
-class AuxiliaryModelInstances : Disposable {
+class AuxiliaryModels : Disposable {
     private var gridModelInstance: ModelInstance
     private var axisModelInstance: ModelInstance
     private lateinit var gridModel: Model
@@ -51,7 +51,9 @@ class AuxiliaryModelInstances : Disposable {
     }
 
     override fun dispose() {
-        GeneralUtils.disposeObject(this, AuxiliaryModelInstances::class.java)
+        GeneralUtils.disposeObject(this, AuxiliaryModels::class.java)
+
     }
+
 
 }

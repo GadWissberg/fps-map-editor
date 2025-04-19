@@ -21,6 +21,7 @@ class FpsMapEditor : ApplicationAdapter() {
     private lateinit var menuBar: MenuBar
     private val sceneRenderer: SceneRenderer by lazy { SceneRenderer() }
     private val stage: Stage by lazy { Stage(ScreenViewport()) }
+
     override fun create() {
         Gdx.input.inputProcessor = InputMultiplexer(stage)
         VisUI.load()
@@ -34,6 +35,20 @@ class FpsMapEditor : ApplicationAdapter() {
         root.add(menuBar.table).fill().expandX()
         root.pack()
         sceneRenderer.init()
+    }
+
+    override fun render() {
+        super.render()
+        Gdx.gl.glViewport(
+            0,
+            0,
+            Gdx.graphics.backBufferWidth,
+            Gdx.graphics.backBufferHeight
+        )
+        ScreenUtils.clear(Color.BLACK, true)
+        sceneRenderer.render()
+        stage.act()
+        stage.draw()
     }
 
     private fun addMenu(): MenuBar {
@@ -80,20 +95,6 @@ class FpsMapEditor : ApplicationAdapter() {
                 }
             }
         )
-    }
-
-    override fun render() {
-        super.render()
-        Gdx.gl.glViewport(
-            0,
-            0,
-            Gdx.graphics.backBufferWidth,
-            Gdx.graphics.backBufferHeight
-        )
-        ScreenUtils.clear(Color.BLACK, true)
-        sceneRenderer.render()
-        stage.act()
-        stage.draw()
     }
 
 }
