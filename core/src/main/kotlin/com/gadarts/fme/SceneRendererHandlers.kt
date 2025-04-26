@@ -8,13 +8,13 @@ data class SceneRendererHandlers(
 ) : Disposable {
     val cameraHandler = CameraHandler()
     val drawingHandler = DrawingHandler(blocks, cameraHandler.camera)
-    val highlightHandler = HighlightHandler(cameraHandler.camera, blocks)
+    val facesHandler = FacesHandler(cameraHandler.camera, blocks)
     val renderingHandler =
-        RenderingHandler(blocks, auxiliaryModels, drawingHandler, highlightHandler, cameraHandler)
+        RenderingHandler(blocks, auxiliaryModels, drawingHandler, facesHandler, cameraHandler)
 
     override fun dispose() {
         drawingHandler.dispose()
-        highlightHandler.dispose()
+        facesHandler.dispose()
         auxiliaryModels.dispose()
     }
 

@@ -36,10 +36,16 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
     }
 
     override fun keyDown(keycode: Int): Boolean {
+        if (mode == Modes.FACES) {
+            return handlers.facesHandler.keyDown(keycode)
+        }
         return false
     }
 
     override fun keyUp(keycode: Int): Boolean {
+        if (mode == Modes.FACES) {
+            return handlers.facesHandler.keyUp(keycode)
+        }
         return false
     }
 
@@ -53,8 +59,8 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
         if (mode == Modes.CREATE) {
             handlers.drawingHandler.applyCreate(screenX, screenY)
             return true
-        } else if (mode == Modes.SELECT_FACE) {
-            handlers.highlightHandler.applySelectFace(screenX, screenY)
+        } else if (mode == Modes.FACES) {
+            handlers.facesHandler.applySelectFace(screenX, screenY)
             return true
         }
         return false
@@ -74,7 +80,12 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
 
 
     override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-        return handlers.drawingHandler.touchDragged(screenX, screenY)
+        if (mode == Modes.CREATE) {
+            return handlers.drawingHandler.touchDragged(screenX, screenY)
+        } else if (mode == Modes.FACES) {
+            return handlers.facesHandler.touchDragged(screenX, screenY)
+        }
+        return false
     }
 
     override fun mouseMoved(screenX: Int, screenY: Int): Boolean {

@@ -12,7 +12,7 @@ class RenderingHandler(
     private val blocks: MutableList<SceneRenderer.Block>,
     private val auxiliaryModels: AuxiliaryModels,
     private val drawingHandler: DrawingHandler,
-    private val highlightHandler: HighlightHandler,
+    private val highlightHandler: FacesHandler,
     private val cameraHandler: CameraHandler
 ) {
     private val modelsBatch = ModelBatch()
