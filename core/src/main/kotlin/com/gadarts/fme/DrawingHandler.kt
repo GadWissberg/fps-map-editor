@@ -77,7 +77,7 @@ class DrawingHandler(
             vertexNormals[i].nor()
         }
 
-        // Now flatten vertex + normal into FloatArray
+        // Now flatten vertex and normal into FloatArray
         val vertexData = FloatArray(vertices.size * 6)
         for (i in vertices.indices) {
             vertexData[i * 6 + 0] = vertices[i].x
@@ -121,6 +121,83 @@ class DrawingHandler(
         return model
     }
 
+    private fun cloneModel(original: Model): Model {
+        val clonedModel = Model()
+
+        // Deep clone each mesh
+        for (originalMesh in original.meshes) {
+            // Create new mesh with same attributes
+            val mesh = Mesh(
+                true,
+                originalMesh.numVertices,
+                originalMesh.numIndices,
+                originalMesh.vertexAttributes
+            )
+
+            // Copy vertex and index data
+            val vertices = FloatArray(originalMesh.numVertices * originalMesh.vertexSize / 4)
+            originalMesh.getVertices(vertices)
+            mesh.setVertices(vertices)
+
+            val indices = ShortArray(originalMesh.numIndices)
+            originalMesh.getIndices(indices)
+            mesh.setIndices(indices)
+
+            clonedModel.meshes.add(mesh)
+            clonedModel.manageDisposable(mesh)
+        }
+
+        // Clone materials
+        for (originalMaterial in original.materials) {
+            val clonedMaterial = Material()
+            for (attribute in originalMaterial) {
+                clonedMaterial.set(attribute.copy())
+            }
+            clonedModel.materials.add(clonedMaterial)
+        }
+
+        // Clone nodes and create proper references
+        for (originalNode in original.nodes) {
+            val clonedNode = Node()
+            clonedNode.id = originalNode.id
+            clonedNode.translation.set(originalNode.translation)
+            clonedNode.rotation.set(originalNode.rotation)
+            clonedNode.scale.set(originalNode.scale)
+
+            // Clone node parts and set references to new meshes/materials
+            for (originalPart in originalNode.parts) {
+                val clonedPart = NodePart()
+
+                // Create a new mesh part that references the cloned mesh
+                val meshPartIndex = original.meshes.indexOf(originalPart.meshPart.mesh)
+                if (meshPartIndex >= 0) {
+                    val clonedMesh = clonedModel.meshes.get(meshPartIndex)
+                    clonedPart.meshPart = MeshPart(
+                        originalPart.meshPart.id,
+                        clonedMesh,
+                        originalPart.meshPart.offset,
+                        originalPart.meshPart.size,
+                        originalPart.meshPart.primitiveType
+                    )
+                }
+
+                // Set material reference
+                val materialIndex = original.materials.indexOf(originalPart.material)
+                if (materialIndex >= 0) {
+                    clonedPart.material = clonedModel.materials.get(materialIndex)
+                }
+
+                clonedNode.parts.add(clonedPart)
+            }
+
+            clonedModel.nodes.add(clonedNode)
+        }
+
+        clonedModel.calculateTransforms()
+
+        return clonedModel
+    }
+
     fun applyCreate(screenX: Int, screenY: Int) {
         val relativeX = screenX.toFloat()
         val relativeY = screenY.toFloat()
@@ -129,7 +206,8 @@ class DrawingHandler(
         if (hit != null) {
             val (_, point) = hit
             point.set(point.x.toInt().toFloat(), point.y.toInt().toFloat(), point.z.toInt().toFloat())
-            val modelInstance = ModelInstance(cubeModel)
+            val modelCopy = cloneModel(cubeModel)
+            val modelInstance = ModelInstance(modelCopy)
             modelInstance.transform.setTranslation(point)
             drawingBlock = modelInstance
             initialDrawingPoint.set(point)

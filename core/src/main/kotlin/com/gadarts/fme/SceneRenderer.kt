@@ -50,6 +50,9 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
     }
 
     override fun keyTyped(character: Char): Boolean {
+        if (mode == Modes.FACES) {
+            return handlers.facesHandler.keyTyped(character)
+        }
         return false
     }
 
@@ -82,8 +85,6 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
     override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
         if (mode == Modes.CREATE) {
             return handlers.drawingHandler.touchDragged(screenX, screenY)
-        } else if (mode == Modes.FACES) {
-            return handlers.facesHandler.touchDragged(screenX, screenY)
         }
         return false
     }
