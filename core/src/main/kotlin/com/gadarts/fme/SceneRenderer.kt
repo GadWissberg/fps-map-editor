@@ -37,21 +37,18 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
 
     override fun keyDown(keycode: Int): Boolean {
         if (mode == Modes.FACES) {
-            return handlers.facesHandler.keyDown(keycode)
+            return handlers.modeFacesHandler.keyDown(keycode)
         }
         return false
     }
 
     override fun keyUp(keycode: Int): Boolean {
-        if (mode == Modes.FACES) {
-            return handlers.facesHandler.keyUp(keycode)
-        }
         return false
     }
 
     override fun keyTyped(character: Char): Boolean {
         if (mode == Modes.FACES) {
-            return handlers.facesHandler.keyTyped(character)
+            return handlers.modeFacesHandler.keyTyped(character)
         }
         return false
     }
@@ -63,7 +60,7 @@ class SceneRenderer : Table(), InputProcessor, Disposable {
             handlers.drawingHandler.applyCreate(screenX, screenY)
             return true
         } else if (mode == Modes.FACES) {
-            handlers.facesHandler.applySelectFace(screenX, screenY)
+            handlers.modeFacesHandler.applySelectFace(screenX, screenY)
             return true
         }
         return false

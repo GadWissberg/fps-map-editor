@@ -1,5 +1,6 @@
 package com.gadarts.fme
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.graphics.g3d.Model
@@ -249,17 +250,29 @@ class DrawingHandler(
             if (hit != null) {
                 val (_, point) = hit
                 point.set(point.x.toInt().toFloat(), point.y.toInt().toFloat(), point.z.toInt().toFloat())
+
+                // Get scaling values, keeping your original logic
+                val scaleX = if (abs(point.x - initialDrawingPoint.x) > 1F) point.x - initialDrawingPoint.x else 1F
+                val scaleZ = if (abs(point.z - initialDrawingPoint.z) > 1F) point.z - initialDrawingPoint.z else 1F
+
                 drawingBlock!!.transform.set(auxMatrix)
-                drawingBlock!!.transform.scl(
-                    if (abs(point.x - initialDrawingPoint.x) > 1F) point.x - initialDrawingPoint.x else 1F,
-                    1F,
-                    if (abs(point.z - initialDrawingPoint.z) > 1F) point.z - initialDrawingPoint.z else 1F
-                )
+                drawingBlock!!.transform.scl(scaleX, 1F, scaleZ)
+
+                // Check if we need to flip face culling
+                if (scaleX < 0 || scaleZ < 0) {
+                    // Toggle face culling
+                    Gdx.gl.glFrontFace(GL20.GL_CW) // Change to clockwise (normally it's GL_CCW)
+                } else {
+                    // Reset to default
+                    Gdx.gl.glFrontFace(GL20.GL_CCW) // Counter-clockwise is the default
+                }
+
                 return true
             }
         }
         return false
     }
+
 
     private fun getFirstPlaneIntersection(
         screenX: Int,

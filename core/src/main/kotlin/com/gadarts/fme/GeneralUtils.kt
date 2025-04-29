@@ -1,10 +1,17 @@
 package com.gadarts.fme
 
+import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.utils.Disposable
 import java.lang.reflect.Field
 import java.util.*
 
 object GeneralUtils {
+    fun getVerticesForMesh(mesh: Mesh): FloatArray {
+        val vertices = FloatArray(mesh.numVertices * mesh.vertexSize / 4)
+        mesh.getVertices(vertices)
+        return vertices
+    }
+
     fun <T> disposeObject(instance: T, clazz: Class<T>) {
         val fields = clazz.declaredFields
         Arrays.stream(fields).forEach { field: Field ->

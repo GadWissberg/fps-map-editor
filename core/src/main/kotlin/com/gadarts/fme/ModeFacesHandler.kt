@@ -1,38 +1,74 @@
 package com.gadarts.fme
 
 import com.badlogic.gdx.Input
-import com.badlogic.gdx.graphics.*
-import com.badlogic.gdx.graphics.g3d.*
-import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
-import com.badlogic.gdx.graphics.g3d.model.MeshPart
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.graphics.VertexAttributes
+import com.badlogic.gdx.graphics.g3d.Environment
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.model.Node
-import com.badlogic.gdx.graphics.g3d.model.NodePart
 import com.badlogic.gdx.math.Intersector
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import com.badlogic.gdx.utils.Disposable
+import com.gadarts.fme.GeneralUtils.getVerticesForMesh
 import com.gadarts.fme.SceneRenderer.Block
 
 private enum class Axis { X, Y, Z }
-class FacesHandler(private val camera: PerspectiveCamera, private val blocks: MutableList<Block>) : Disposable {
+class ModeFacesHandler(private val camera: PerspectiveCamera, private val blocks: MutableList<Block>) : Disposable {
     private var selectedBlock: Block? = null
     private var selectedFaceIndices: Set<Int> = emptySet()
     private var connectedVertices: Set<Int> = emptySet()
-    private var highlightedMesh: Mesh? = null
     private var selectedAxis: Axis? = null
-    fun render(modelsBatch: ModelBatch, environment: Environment) {
-        if (highlightedTriangleInstance != null) {
-            modelsBatch.render(highlightedTriangleInstance, environment)
+    private var highlightHandler = HighlightHandler()
+
+    fun keyTyped(character: Char): Boolean {
+        when (character.lowercaseChar()) {
+            'x' -> {
+                selectedAxis = Axis.X
+                return true
+            }
+
+            'y' -> {
+                selectedAxis = Axis.Y
+                return true
+            }
+
+            'z' -> {
+                selectedAxis = Axis.Z
+                return true
+            }
         }
+        return false
     }
 
+    fun keyDown(keycode: Int): Boolean {
+        if (highlightHandler.highlightedTriangleInstance != null && selectedAxis != null) {
+            var delta = 0f
+            if (keycode == Input.Keys.UP) {
+                delta = 1f
+            } else if (keycode == Input.Keys.DOWN) {
+                delta = -1f
+            }
+
+            if (delta != 0f) {
+                when (selectedAxis) {
+                    Axis.X -> moveSelectedFace(delta, 0f, 0f)
+                    Axis.Y -> moveSelectedFace(0f, delta, 0f)
+                    Axis.Z -> moveSelectedFace(0f, 0f, delta)
+                    else -> {}
+                }
+                highlightHandler.updateHighlightVertices(selectedBlock, selectedFaceIndices)
+                return true
+            }
+        }
+
+        return false
+    }
 
     fun applySelectFace(screenX: Int, screenY: Int) {
-        // Clear old highlight
-        highlightedTriangleInstance = null
-        highlightedModel?.dispose()
-        highlightedModel = null
-        highlightedMesh = null
+        highlightHandler.reset()
 
         val ray = camera.getPickRay(screenX.toFloat(), screenY.toFloat())
         var closestBlock: Block? = null
@@ -75,45 +111,20 @@ class FacesHandler(private val camera: PerspectiveCamera, private val blocks: Mu
                     rectangleUniqueVerts.add(worldVertex)
                 }
 
-                highlightedTriangleInstance = createRectangleHighlight(rectangleUniqueVerts)
-                highlightedTriangleInstance!!.transform.idt()
+                highlightHandler.highlight(rectangleUniqueVerts)
             }
 
-            lastScreenY = screenY
         }
     }
 
-    private fun updateHighlightVertices() {
-        val block = selectedBlock ?: return
-        val mesh = block.modelInstance.model.meshes.first()
-        val vertices = getVerticesForMesh(mesh)
-        val posOffset = mesh.getVertexAttribute(VertexAttributes.Usage.Position).offset / 4
-        val stride = mesh.vertexSize / 4
-
-        if (selectedFaceIndices.isEmpty()) return
-
-        val uniqueFaceIndices = selectedFaceIndices.distinct()
-
-        val highlightVertices = FloatArray(4 * 3) // 4 vertices, 3 floats each
-
-        for (i in 0 until 4) {
-            val idx = uniqueFaceIndices[i]
-            val baseIdx = idx * stride + posOffset
-
-            val localVertex = Vector3(
-                vertices[baseIdx],
-                vertices[baseIdx + 1],
-                vertices[baseIdx + 2]
-            )
-            val worldVertex = localVertex.prj(block.modelInstance.transform)
-
-            highlightVertices[i * 3] = worldVertex.x
-            highlightVertices[i * 3 + 1] = worldVertex.y
-            highlightVertices[i * 3 + 2] = worldVertex.z
-        }
-
-        highlightedMesh?.setVertices(highlightVertices)
+    fun render(modelsBatch: ModelBatch, environment: Environment) {
+        highlightHandler.render(modelsBatch, environment)
     }
+
+    override fun dispose() {
+        highlightHandler.dispose()
+    }
+
 
     private fun getLastHitFaceIndices(instance: ModelInstance, ray: Ray): Set<Int> {
         val mesh = instance.model.meshes.first()
@@ -175,71 +186,15 @@ class FacesHandler(private val camera: PerspectiveCamera, private val blocks: Mu
         return indices
     }
 
-    private fun getVerticesForMesh(mesh: Mesh): FloatArray {
-        val vertices = FloatArray(mesh.numVertices * mesh.vertexSize / 4)
-        mesh.getVertices(vertices)
-        return vertices
-    }
 
     private fun transformVertex(v: Vector3, instance: ModelInstance, node: Node): Vector3 {
         return v.cpy().mul(node.globalTransform).mul(instance.transform)
     }
 
 
-    private fun createRectangleHighlight(vertices: List<Vector3>): ModelInstance {
-        if (vertices.size != 4) throw IllegalArgumentException("Expected exactly 4 vertices for rectangle highlight!")
-
-        val verticesFlat = FloatArray(4 * 3)
-
-        for (i in 0 until 4) {
-            verticesFlat[i * 3] = vertices[i].x
-            verticesFlat[i * 3 + 1] = vertices[i].y
-            verticesFlat[i * 3 + 2] = vertices[i].z
-        }
-
-        val indices = shortArrayOf(
-            0, 1, 2,
-            2, 3, 0
-        )
-
-        val mesh = Mesh(
-            true, 4, 6,
-            VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position")
-        )
-        mesh.setVertices(verticesFlat)
-        mesh.setIndices(indices)
-
-        val material = Material(ColorAttribute.createDiffuse(Color.RED))
-
-        highlightedModel?.dispose()
-        highlightedModel = Model().apply {
-            meshes.add(mesh)
-            materials.add(material)
-            nodes.add(Node().apply {
-                id = "rectangle"
-                parts.add(NodePart().apply {
-                    meshPart = MeshPart("rectangle", mesh, 0, 6, GL20.GL_TRIANGLES)
-                    this.material = material
-                })
-            })
-            manageDisposable(mesh)
-        }
-
-        highlightedMesh = mesh
-
-        return ModelInstance(highlightedModel)
-    }
-
-    private var moveAlongY: Boolean = false
-    private var highlightedModel: Model? = null
-    private var highlightedTriangleInstance: ModelInstance? = null
-    private var lastScreenY = 0
-    override fun dispose() {
-        highlightedModel?.dispose()
-    }
-
     private fun moveSelectedFace(deltaX: Float, deltaY: Float, deltaZ: Float) {
         val block = selectedBlock ?: return
+
         val mesh = block.modelInstance.model.meshes.first()
 
         val vertices = getVerticesForMesh(mesh)
@@ -247,9 +202,8 @@ class FacesHandler(private val camera: PerspectiveCamera, private val blocks: Mu
         val stride = mesh.vertexSize / 4
 
         val worldMove = Vector3(deltaX, deltaY, deltaZ)
-        // Correct local move: remove translation first
         val transform = block.modelInstance.transform.cpy()
-        transform.setTranslation(0f, 0f, 0f) // 🚨 zero out translation
+        transform.setTranslation(0f, 0f, 0f)
         val localMove = worldMove.prj(transform.inv())
 
         for (idx in connectedVertices) {
@@ -263,62 +217,6 @@ class FacesHandler(private val camera: PerspectiveCamera, private val blocks: Mu
         mesh.setVertices(vertices)
     }
 
-    fun keyDown(keycode: Int): Boolean {
-        if (highlightedTriangleInstance != null && selectedAxis != null) {
-            var delta = 0f
-            if (keycode == Input.Keys.UP) {
-                delta = 1f
-            } else if (keycode == Input.Keys.DOWN) {
-                delta = -1f
-            }
-
-            if (delta != 0f) {
-                when (selectedAxis) {
-                    Axis.X -> moveSelectedFace(delta, 0f, 0f)
-                    Axis.Y -> moveSelectedFace(0f, delta, 0f)
-                    Axis.Z -> moveSelectedFace(0f, 0f, delta)
-                    else -> {}
-                }
-                updateHighlightVertices()
-                return true
-            }
-        }
-
-        // Your old ALT key handling
-        if (keycode == Input.Keys.ALT_LEFT) {
-            moveAlongY = true
-            return true
-        }
-        return false
-    }
-
-    fun keyUp(keycode: Int): Boolean {
-        if (keycode == Input.Keys.ALT_LEFT) {
-            moveAlongY = false
-            return true
-        }
-        return false
-    }
-
-    fun keyTyped(character: Char): Boolean {
-        when (character.lowercaseChar()) {
-            'x' -> {
-                selectedAxis = Axis.X
-                return true
-            }
-
-            'y' -> {
-                selectedAxis = Axis.Y
-                return true
-            }
-
-            'z' -> {
-                selectedAxis = Axis.Z
-                return true
-            }
-        }
-        return false
-    }
 
 }
 
