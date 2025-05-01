@@ -1,4 +1,4 @@
-package com.gadarts.fme
+package com.gadarts.fme.sr
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer
@@ -8,6 +8,8 @@ import com.badlogic.gdx.math.Plane
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Disposable
+import com.gadarts.fme.AuxiliaryModels
+import com.gadarts.fme.sr.handlers.SceneRendererHandlers
 
 class SceneRenderer : Table(), InputProcessor, Disposable {
     private val auxiliaryModels = AuxiliaryModels()

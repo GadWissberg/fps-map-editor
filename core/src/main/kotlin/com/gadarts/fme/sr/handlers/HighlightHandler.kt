@@ -1,4 +1,4 @@
-package com.gadarts.fme
+package com.gadarts.fme.sr.handlers
 
 import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.g3d.*
@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g3d.model.NodePart
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import com.gadarts.fme.GeneralUtils.getVerticesForMesh
+import com.gadarts.fme.sr.SceneRenderer
 
 class HighlightHandler : Disposable {
     var highlightedTriangleInstance: ModelInstance? = null

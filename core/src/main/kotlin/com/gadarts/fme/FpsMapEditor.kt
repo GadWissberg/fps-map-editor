@@ -11,6 +11,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Stack
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
+import com.gadarts.fme.sr.Modes
+import com.gadarts.fme.sr.SceneRenderer
 import com.kotcrab.vis.ui.VisUI
 import com.kotcrab.vis.ui.widget.Menu
 import com.kotcrab.vis.ui.widget.MenuBar

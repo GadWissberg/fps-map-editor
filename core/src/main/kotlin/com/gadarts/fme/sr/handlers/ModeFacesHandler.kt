@@ -1,7 +1,6 @@
-package com.gadarts.fme
+package com.gadarts.fme.sr.handlers
 
 import com.badlogic.gdx.Input
-import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.Environment
@@ -12,8 +11,9 @@ import com.badlogic.gdx.math.Intersector
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import com.badlogic.gdx.utils.Disposable
+import com.gadarts.fme.GeneralUtils.getIndicesForMesh
 import com.gadarts.fme.GeneralUtils.getVerticesForMesh
-import com.gadarts.fme.SceneRenderer.Block
+import com.gadarts.fme.sr.SceneRenderer.Block
 
 private enum class Axis { X, Y, Z }
 class ModeFacesHandler(private val camera: PerspectiveCamera, private val blocks: MutableList<Block>) : Disposable {
@@ -178,12 +178,6 @@ class ModeFacesHandler(private val camera: PerspectiveCamera, private val blocks
             vertices[i1 * stride + posOffset + 1],
             vertices[i1 * stride + posOffset + 2]
         )
-    }
-
-    private fun getIndicesForMesh(mesh: Mesh): ShortArray {
-        val indices = ShortArray(mesh.numIndices)
-        mesh.getIndices(indices)
-        return indices
     }
 
 

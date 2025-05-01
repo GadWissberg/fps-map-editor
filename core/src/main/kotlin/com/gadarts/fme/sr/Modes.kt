@@ -1,4 +1,4 @@
-package com.gadarts.fme
+package com.gadarts.fme.sr
 
 enum class Modes {
     CAMERA,

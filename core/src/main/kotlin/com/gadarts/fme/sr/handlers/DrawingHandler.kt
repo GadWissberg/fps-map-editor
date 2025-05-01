@@ -1,6 +1,5 @@
-package com.gadarts.fme
+package com.gadarts.fme.sr.handlers
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.*
 import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.graphics.g3d.Model
@@ -15,15 +14,40 @@ import com.badlogic.gdx.math.Plane
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Disposable
-import com.gadarts.fme.SceneRenderer.Block
-import com.gadarts.fme.SceneRenderer.ScenePlane
-import kotlin.math.abs
+import com.gadarts.fme.GeneralUtils
+import com.gadarts.fme.sr.SceneRenderer.Block
+import com.gadarts.fme.sr.SceneRenderer.ScenePlane
+import kotlin.math.*
 
 class DrawingHandler(
     private val blocks: MutableList<Block>,
     private val camera: PerspectiveCamera
 ) : Disposable {
     private val cubeModel = createIndexedCubeModel()
+    private val unitCubeVertices: FloatArray = run {
+        val mesh = cubeModel.meshes.first()
+        FloatArray(mesh.numVertices * mesh.vertexSize / 4).apply(mesh::getVertices)
+    }
+
+    private fun resizeMeshXZ(mesh: Mesh, width: Float, depth: Float) {
+        val vsize = mesh.vertexSize / 4
+        val posOff = mesh.getVertexAttribute(VertexAttributes.Usage.Position).offset / 4
+
+        // start from pristine unit-cube data
+        val verts = unitCubeVertices.copyOf()
+
+        // vertices 1,2,5,6 have x = 1 → set to width
+        for (i in arrayOf(1, 2, 5, 6)) {
+            verts[i * vsize + posOff] = width
+        }
+
+        // vertices 4,5,6,7 have z = 1 → set to depth
+        for (i in arrayOf(4, 5, 6, 7)) {
+            verts[i * vsize + posOff + 2] = depth
+        }
+
+        mesh.setVertices(verts)
+    }
 
     private fun createIndexedCubeModel(): Model {
         // Create mesh manually
@@ -200,21 +224,81 @@ class DrawingHandler(
     }
 
     fun applyCreate(screenX: Int, screenY: Int) {
-        val relativeX = screenX.toFloat()
-        val relativeY = screenY.toFloat()
-        camera.getPickRay(relativeX, relativeY)
-        val hit = getFirstPlaneIntersection(screenX, screenY, scenePlanes)
-        if (hit != null) {
-            val (_, point) = hit
-            point.set(point.x.toInt().toFloat(), point.y.toInt().toFloat(), point.z.toInt().toFloat())
-            val modelCopy = cloneModel(cubeModel)
-            val modelInstance = ModelInstance(modelCopy)
-            modelInstance.transform.setTranslation(point)
-            drawingBlock = modelInstance
-            initialDrawingPoint.set(point)
-            auxMatrix.set(drawingBlock!!.transform)
+        val ray = camera.getPickRay(screenX.toFloat(), screenY.toFloat())
+
+        var closestDist = Float.MAX_VALUE
+        val intersection = Vector3()
+        val hitNormal = Vector3()
+        var placementPos: Vector3? = null            // final spawn cell
+
+        // ───── 1. Ray-cast against every block ───────────────────────────
+        blocks.forEach { block ->
+            val mesh = block.modelInstance.model.meshes.first()
+            val transform = block.modelInstance.transform
+            val node = block.modelInstance.nodes.first()
+
+            val idx = GeneralUtils.getIndicesForMesh(mesh)
+            val vtx = GeneralUtils.getVerticesForMesh(mesh)
+            val off = mesh.getVertexAttribute(VertexAttributes.Usage.Position).offset / 4
+            val stride = mesh.vertexSize / 4
+
+            fun vert(i: Int): Vector3 {
+                val b = i * stride + off
+                return Vector3(vtx[b], vtx[b + 1], vtx[b + 2])
+                    .mul(node.globalTransform).mul(transform)          // world
+            }
+
+            for (i in idx.indices step 3) {
+                val v1 = vert(idx[i].toInt())
+                val v2 = vert(idx[i + 1].toInt())
+                val v3 = vert(idx[i + 2].toInt())
+
+                if (Intersector.intersectRayTriangle(ray, v1, v2, v3, intersection)) {
+                    val d2 = ray.origin.dst2(intersection)
+                    if (d2 < closestDist) {
+                        closestDist = d2
+
+                        // axis-aligned normal (±1,0,0) | (0,±1,0) | (0,0,±1)
+                        hitNormal.set(axisClamp(v2.cpy().sub(v1).crs(v3.cpy().sub(v1)).nor()))
+
+// ─── bias-snap so we never stay inside the old cube ───
+                        val eps = 0.001f                                    // tiny push toward the face
+                        fun snap(c: Float, n: Int) = floor(c - eps * n) + n // n = −1 | 0 | +1
+
+                        placementPos = Vector3(
+                            snap(intersection.x, hitNormal.x.toInt()),
+                            snap(intersection.y, hitNormal.y.toInt()),
+                            snap(intersection.z, hitNormal.z.toInt())
+                        )
+                    }
+                }
+            }
         }
 
+        // ───── 2. Empty scene fallback: snap to ground (Y = 0) ───────────
+        if (placementPos == null) {
+            val groundHit = getFirstPlaneIntersection(
+                screenX, screenY,
+                listOf(ScenePlane(Plane(Vector3.Y, 0f), "ground"))
+            )
+            placementPos = groundHit?.second?.let { Vector3(floor(it.x), 0f, floor(it.z)) }
+        }
+
+        // ───── 3. Spawn the new cube ─────────────────────────────────────
+        placementPos?.let { pos ->
+            val inst = ModelInstance(cloneModel(cubeModel))
+            inst.transform.setTranslation(pos)
+            drawingBlock = inst
+            initialDrawingPoint.set(pos)
+            auxMatrix.set(inst.transform)
+        }
+    }
+
+    /** returns (±1,0,0) or (0,±1,0) or (0,0,±1) */
+    private fun axisClamp(n: Vector3): Vector3 = when {
+        abs(n.x) > abs(n.y) && abs(n.x) > abs(n.z) -> Vector3(sign(n.x), 0f, 0f)
+        abs(n.y) > abs(n.z) -> Vector3(0f, sign(n.y), 0f)
+        else -> Vector3(0f, 0f, sign(n.z))
     }
 
     private val scenePlanes = listOf(
@@ -241,38 +325,27 @@ class DrawingHandler(
     }
 
     fun touchDragged(screenX: Int, screenY: Int): Boolean {
-        if (drawingBlock != null) {
-            val relativeX = screenX.toFloat()
-            val relativeY = screenY.toFloat()
+        if (drawingBlock == null) return false
 
-            camera.getPickRay(relativeX, relativeY)
-            val hit = getFirstPlaneIntersection(screenX, screenY, scenePlanes)
-            if (hit != null) {
-                val (_, point) = hit
-                point.set(point.x.toInt().toFloat(), point.y.toInt().toFloat(), point.z.toInt().toFloat())
+        val hit = getFirstPlaneIntersection(screenX, screenY, scenePlanes) ?: return false
+        val (_, p) = hit
+        p.set(p.x.toInt().toFloat(), p.y.toInt().toFloat(), p.z.toInt().toFloat())
 
-                // Get scaling values, keeping your original logic
-                val scaleX = if (abs(point.x - initialDrawingPoint.x) > 1F) point.x - initialDrawingPoint.x else 1F
-                val scaleZ = if (abs(point.z - initialDrawingPoint.z) > 1F) point.z - initialDrawingPoint.z else 1F
+        val w = max(1f, abs(p.x - initialDrawingPoint.x))
+        val d = max(1f, abs(p.z - initialDrawingPoint.z))
 
-                drawingBlock!!.transform.set(auxMatrix)
-                drawingBlock!!.transform.scl(scaleX, 1F, scaleZ)
+        val mesh = drawingBlock!!.model.meshes.first()
+        resizeMeshXZ(mesh, w, d)            // 🔥 update vertices
 
-                // Check if we need to flip face culling
-                if (scaleX < 0 || scaleZ < 0) {
-                    // Toggle face culling
-                    Gdx.gl.glFrontFace(GL20.GL_CW) // Change to clockwise (normally it's GL_CCW)
-                } else {
-                    // Reset to default
-                    Gdx.gl.glFrontFace(GL20.GL_CCW) // Counter-clockwise is the default
-                }
-
-                return true
-            }
-        }
-        return false
+        // keep modelInstance transform identity so grid math stays exact
+        drawingBlock!!.transform.idt()
+        drawingBlock!!.transform.setTranslation(
+            min(p.x, initialDrawingPoint.x),
+            initialDrawingPoint.y,                 // ← keep original layer
+            min(p.z, initialDrawingPoint.z)
+        )
+        return true
     }
-
 
     private fun getFirstPlaneIntersection(
         screenX: Int,

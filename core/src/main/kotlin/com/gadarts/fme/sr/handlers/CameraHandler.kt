@@ -1,10 +1,11 @@
-package com.gadarts.fme
+package com.gadarts.fme.sr.handlers
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController
 import com.badlogic.gdx.math.Vector3
+import com.gadarts.fme.sr.Modes
 
 class CameraHandler {
     fun update() {

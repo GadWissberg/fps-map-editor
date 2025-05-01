@@ -12,6 +12,12 @@ object GeneralUtils {
         return vertices
     }
 
+    fun getIndicesForMesh(mesh: Mesh): ShortArray {
+        val indices = ShortArray(mesh.numIndices)
+        mesh.getIndices(indices)
+        return indices
+    }
+
     fun <T> disposeObject(instance: T, clazz: Class<T>) {
         val fields = clazz.declaredFields
         Arrays.stream(fields).forEach { field: Field ->
