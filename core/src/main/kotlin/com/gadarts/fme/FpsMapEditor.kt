@@ -57,16 +57,31 @@ class FpsMapEditor : ApplicationAdapter() {
         val menuBar = MenuBar()
         val fileMenu = Menu("File")
         val newItem = MenuItem("New")
+        val saveItem = MenuItem("Save")
+        addFileMenuItemClickListener(saveItem) { sceneRenderer.save() }
         val openItem = MenuItem("Open")
+        addFileMenuItemClickListener(openItem) { sceneRenderer.load() }
         val exitItem = MenuItem("Exit")
         exitItem.setShortcut("Ctrl+Q")
         fileMenu.addItem(newItem)
+        fileMenu.addItem(saveItem)
         fileMenu.addItem(openItem)
         fileMenu.addSeparator()
         fileMenu.addItem(exitItem)
-        addModeMenu(menuBar)
         menuBar.addMenu(fileMenu)
+        addModeMenu(menuBar)
         return menuBar
+    }
+
+    private fun addFileMenuItemClickListener(openItem: MenuItem, click: () -> Unit) {
+        openItem.addListener(
+            object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    super.clicked(event, x, y)
+                    click.invoke()
+                }
+            }
+        )
     }
 
     private fun addModeMenu(menuBar: MenuBar) {

@@ -11,9 +11,9 @@ import com.badlogic.gdx.math.Intersector
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import com.badlogic.gdx.utils.Disposable
-import com.gadarts.fme.GeneralUtils.getIndicesForMesh
-import com.gadarts.fme.GeneralUtils.getVerticesForMesh
 import com.gadarts.fme.sr.SceneRenderer.Block
+import com.gadarts.fme.utils.MeshUtils.getIndicesForMesh
+import com.gadarts.fme.utils.MeshUtils.getVerticesForMesh
 
 private enum class Axis { X, Y, Z }
 class ModeFacesHandler(private val camera: PerspectiveCamera, private val blocks: MutableList<Block>) : Disposable {

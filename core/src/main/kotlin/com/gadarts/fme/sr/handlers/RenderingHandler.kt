@@ -13,9 +13,9 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import com.gadarts.fme.AuxiliaryModels
-import com.gadarts.fme.GeneralUtils
+import com.gadarts.fme.sr.AuxiliaryModels
 import com.gadarts.fme.sr.SceneRenderer
+import com.gadarts.fme.utils.MeshUtils
 
 class RenderingHandler(
     private val blocks: MutableList<SceneRenderer.Block>,
@@ -57,8 +57,8 @@ class RenderingHandler(
         for (block in blocks) {
             val transform = block.modelInstance.transform
             val mesh = block.modelInstance.model.meshes.first()
-            val indices = GeneralUtils.getIndicesForMesh(mesh)
-            val vertices = GeneralUtils.getVerticesForMesh(mesh)
+            val indices = MeshUtils.getIndicesForMesh(mesh)
+            val vertices = MeshUtils.getVerticesForMesh(mesh)
             val posOffset = mesh.getVertexAttribute(VertexAttributes.Usage.Position).offset / 4
             val stride = mesh.vertexSize / 4
 

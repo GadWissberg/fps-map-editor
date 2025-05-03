@@ -18,6 +18,7 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 
 
 import io.github.fourlastor.construo.Target
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 mainClassName = 'com.gadarts.fme.lwjgl3.Lwjgl3Launcher'
@@ -28,9 +29,10 @@ java.targetCompatibility = 17
 if (JavaVersion.current().isJava9Compatible()) {
         compileJava.options.release.set(17)
 }
-kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+kotlin.compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
 
 dependencies {
+  implementation 'com.google.code.gson:gson:2.10.1'
   implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-bullet-platform:$gdxVersion:natives-desktop"
   implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"

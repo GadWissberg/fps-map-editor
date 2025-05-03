@@ -1,7 +1,7 @@
 package com.gadarts.fme.sr.handlers
 
 import com.badlogic.gdx.utils.Disposable
-import com.gadarts.fme.AuxiliaryModels
+import com.gadarts.fme.sr.AuxiliaryModels
 import com.gadarts.fme.sr.SceneRenderer
 
 data class SceneRendererHandlers(

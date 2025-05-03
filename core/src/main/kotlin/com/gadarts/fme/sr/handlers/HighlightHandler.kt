@@ -8,8 +8,8 @@ import com.badlogic.gdx.graphics.g3d.model.Node
 import com.badlogic.gdx.graphics.g3d.model.NodePart
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
-import com.gadarts.fme.GeneralUtils.getVerticesForMesh
 import com.gadarts.fme.sr.SceneRenderer
+import com.gadarts.fme.utils.MeshUtils.getVerticesForMesh
 
 class HighlightHandler : Disposable {
     var highlightedTriangleInstance: ModelInstance? = null
